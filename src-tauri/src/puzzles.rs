@@ -50,58 +50,58 @@ pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
         let record_batch = record_batch.map_err(|e| e.to_string())?;
         let puzzle_id_array = record_batch
             .column_by_name("PuzzleId")
-            .unwrap()
+            .ok_or("Column 'PuzzleId' not found.".to_string())?
             .as_any()
             .downcast_ref::<StringArray>()
-            .unwrap();
+            .ok_or("Failed to downcast 'PuzzleId' to StringArray.".to_string())?;
         let fen_array = record_batch
             .column_by_name("FEN")
-            .unwrap()
+            .ok_or("Column 'FEN' not found.".to_string())?
             .as_any()
             .downcast_ref::<StringArray>()
-            .unwrap();
+            .ok_or("Failed to downcast 'FEN' to StringArray.".to_string())?;
         let moves_array = record_batch
             .column_by_name("Moves")
-            .unwrap()
+            .ok_or("Column 'Moves' not found.".to_string())?
             .as_any()
             .downcast_ref::<StringArray>()
-            .unwrap();
+            .ok_or("Failed to downcast 'Moves' to StringArray.".to_string())?;
         let rating_array = record_batch
             .column_by_name("Rating")
-            .unwrap()
+            .ok_or("Column 'Rating' not found.".to_string())?
             .as_any()
             .downcast_ref::<Int32Array>()
-            .unwrap();
+            .ok_or("Failed to downcast 'Rating' to Int32Array.".to_string())?;
         let rating_deviation_array = record_batch
             .column_by_name("RatingDeviation")
-            .unwrap()
+            .ok_or("Column 'RatingDeviation' not found.".to_string())?
             .as_any()
             .downcast_ref::<Int32Array>()
-            .unwrap();
+            .ok_or("Failed to downcast 'RatingDeviation' to Int32Array.".to_string())?;
         let popularity_array = record_batch
             .column_by_name("Popularity")
-            .unwrap()
+            .ok_or("Column 'Popularity' not found.".to_string())?
             .as_any()
             .downcast_ref::<Int32Array>()
-            .unwrap();
+            .ok_or("Failed to downcast 'Popularity' to Int32Array.".to_string())?;
         let nb_plays_array = record_batch
             .column_by_name("NbPlays")
-            .unwrap()
+            .ok_or("Column 'NbPlays' not found.".to_string())?
             .as_any()
             .downcast_ref::<Int32Array>()
-            .unwrap();
+            .ok_or("Failed to downcast 'NbPlays' to Int32Array.".to_string())?;
         let themes_array = record_batch
             .column_by_name("Themes")
-            .unwrap()
+            .ok_or("Column 'Themes' not found.".to_string())?
             .as_any()
             .downcast_ref::<StringArray>()
-            .unwrap();
+            .ok_or("Failed to downcast 'Themes' to StringArray.".to_string())?;
         let game_url_array = record_batch
             .column_by_name("GameUrl")
-            .unwrap()
+            .ok_or("Column 'GameUrl' not found.".to_string())?
             .as_any()
             .downcast_ref::<StringArray>()
-            .unwrap();
+            .ok_or("Failed to downcast 'GameUrl' to StringArray.".to_string())?;
 
         for i in 0..record_batch.num_rows() {
             let rating = rating_array.value(i);
