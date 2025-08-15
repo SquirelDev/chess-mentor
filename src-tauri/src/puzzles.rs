@@ -1,7 +1,6 @@
 use std::fs::File;
 use std::path::Path;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use parquet::arrow::arrow_reader::ArrowReader;
 use arrow::array::{StringArray, Int32Array};
 use rand::Rng;
 use serde::{Serialize, Deserialize};
