@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-use arrow::array::{StringArray, Int32Array};
+use arrow::array::{StringArray, UInt16Array, Int8Array, Int64Array, ListArray};
 use rand::Rng;
 use serde::{Serialize, Deserialize};
 
@@ -20,11 +20,13 @@ pub struct Puzzle {
     #[serde(rename = "Popularity")]
     pub popularity: i32,
     #[serde(rename = "NbPlays")]
-    pub nb_plays: i32,
+    pub nb_plays: i64,
     #[serde(rename = "Themes")]
     pub themes: String,
     #[serde(rename = "GameUrl")]
     pub game_url: String,
+    #[serde(rename = "OpeningTags")]
+    pub opening_tags: String,
 }
 
 pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
@@ -73,52 +75,67 @@ pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
                 .column_by_name("Rating")
                 .ok_or("Column 'Rating' not found.".to_string())?
                 .as_any()
-                .downcast_ref::<Int32Array>()
-                .ok_or("Failed to downcast 'Rating' to Int32Array.".to_string())?;
+                .downcast_ref::<UInt16Array>()
+                .ok_or("Failed to downcast 'Rating' to UInt16Array.".to_string())?;
             let rating_deviation_array = record_batch
                 .column_by_name("RatingDeviation")
                 .ok_or("Column 'RatingDeviation' not found.".to_string())?
                 .as_any()
-                .downcast_ref::<Int32Array>()
-                .ok_or("Failed to downcast 'RatingDeviation' to Int32Array.".to_string())?;
+                .downcast_ref::<UInt16Array>()
+                .ok_or("Failed to downcast 'RatingDeviation' to UInt16Array.".to_string())?;
             let popularity_array = record_batch
                 .column_by_name("Popularity")
                 .ok_or("Column 'Popularity' not found.".to_string())?
                 .as_any()
-                .downcast_ref::<Int32Array>()
-                .ok_or("Failed to downcast 'Popularity' to Int32Array.".to_string())?;
+                .downcast_ref::<Int8Array>()
+                .ok_or("Failed to downcast 'Popularity' to Int8Array.".to_string())?;
             let nb_plays_array = record_batch
                 .column_by_name("NbPlays")
                 .ok_or("Column 'NbPlays' not found.".to_string())?
                 .as_any()
-                .downcast_ref::<Int32Array>()
-                .ok_or("Failed to downcast 'NbPlays' to Int32Array.".to_string())?;
+                .downcast_ref::<Int64Array>()
+                .ok_or("Failed to downcast 'NbPlays' to Int64Array.".to_string())?;
             let themes_array = record_batch
                 .column_by_name("Themes")
                 .ok_or("Column 'Themes' not found.".to_string())?
                 .as_any()
-                .downcast_ref::<StringArray>()
-                .ok_or("Failed to downcast 'Themes' to StringArray.".to_string())?;
+                .downcast_ref::<ListArray>()
+                .ok_or("Failed to downcast 'Themes' to ListArray.".to_string())?;
             let game_url_array = record_batch
                 .column_by_name("GameUrl")
                 .ok_or("Column 'GameUrl' not found.".to_string())?
                 .as_any()
                 .downcast_ref::<StringArray>()
                 .ok_or("Failed to downcast 'GameUrl' to StringArray.".to_string())?;
+            let opening_tags_array = record_batch
+                .column_by_name("OpeningTags")
+                .ok_or("Column 'OpeningTags' not found.".to_string())?
+                .as_any()
+                .downcast_ref::<ListArray>()
+                .ok_or("Failed to downcast 'OpeningTags' to ListArray.".to_string())?;
 
             for i in 0..record_batch.num_rows() {
-                let rating = rating_array.value(i);
+                let rating = rating_array.value(i) as i32;
                 if rating >= min_rating && rating <= max_rating {
+                    let themes_list = themes_array.value(i);
+                    let themes_str_array = themes_list.as_any().downcast_ref::<StringArray>().ok_or("Themes list inner array is not StringArray")?;
+                    let themes: Vec<String> = themes_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
+
+                    let opening_tags_list = opening_tags_array.value(i);
+                    let opening_tags_str_array = opening_tags_list.as_any().downcast_ref::<StringArray>().ok_or("OpeningTags list inner array is not StringArray")?;
+                    let opening_tags: Vec<String> = opening_tags_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
+
                     puzzles.push(Puzzle {
                         puzzle_id: puzzle_id_array.value(i).to_string(),
                         fen: fen_array.value(i).to_string(),
                         moves: moves_array.value(i).to_string(),
                         rating,
-                        rating_deviation: rating_deviation_array.value(i),
-                        popularity: popularity_array.value(i),
+                        rating_deviation: rating_deviation_array.value(i) as i32,
+                        popularity: popularity_array.value(i) as i32,
                         nb_plays: nb_plays_array.value(i),
-                        themes: themes_array.value(i).to_string(),
+                        themes: themes.join(", "),
                         game_url: game_url_array.value(i).to_string(),
+                        opening_tags: opening_tags.join(", "),
                     });
                 }
             }
