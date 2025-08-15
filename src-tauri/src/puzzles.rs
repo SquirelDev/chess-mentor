@@ -4,6 +4,8 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use arrow::array::{StringArray, UInt16Array, Int8Array, Int64Array, ListArray};
 use rand::Rng;
 use serde::{Serialize, Deserialize};
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Puzzle {
@@ -29,14 +31,16 @@ pub struct Puzzle {
     pub opening_tags: String,
 }
 
-pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
-    let (min_rating, max_rating) = match level.as_str() {
-        "Easy" => (800, 1200),
-        "Medium" => (1201, 1600),
-        "Hard" => (1601, 2000),
-        _ => (800, 2000),
-    };
+static PUZZLES: Lazy<Mutex<Vec<Puzzle>>> = Lazy::new(|| {
+    Mutex::new(load_all_puzzles().expect("Failed to load puzzles."))
+});
 
+pub fn initialize_puzzles() {
+    // Eagerly initialize the puzzles
+    let _ = PUZZLES.lock();
+}
+
+fn load_all_puzzles() -> Result<Vec<Puzzle>, String> {
     let puzzle_files = ["puzzles-0.parquet", "puzzles-1.parquet", "puzzles-2.parquet"];
     let mut puzzles = Vec::new();
 
@@ -115,39 +119,52 @@ pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
                 .ok_or("Failed to downcast 'OpeningTags' to ListArray.".to_string())?;
 
             for i in 0..record_batch.num_rows() {
-                let rating = rating_array.value(i) as i32;
-                if rating >= min_rating && rating <= max_rating {
-                    let themes_list = themes_array.value(i);
-                    let themes_str_array = themes_list.as_any().downcast_ref::<StringArray>().ok_or("Themes list inner array is not StringArray")?;
-                    let themes: Vec<String> = themes_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
+                let themes_list = themes_array.value(i);
+                let themes_str_array = themes_list.as_any().downcast_ref::<StringArray>().ok_or("Themes list inner array is not StringArray")?;
+                let themes: Vec<String> = themes_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
 
-                    let opening_tags_list = opening_tags_array.value(i);
-                    let opening_tags_str_array = opening_tags_list.as_any().downcast_ref::<StringArray>().ok_or("OpeningTags list inner array is not StringArray")?;
-                    let opening_tags: Vec<String> = opening_tags_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
+                let opening_tags_list = opening_tags_array.value(i);
+                let opening_tags_str_array = opening_tags_list.as_any().downcast_ref::<StringArray>().ok_or("OpeningTags list inner array is not StringArray")?;
+                let opening_tags: Vec<String> = opening_tags_str_array.iter().filter_map(|s| s.map(|s| s.to_string())).collect();
 
-                    puzzles.push(Puzzle {
-                        puzzle_id: puzzle_id_array.value(i).to_string(),
-                        fen: fen_array.value(i).to_string(),
-                        moves: moves_array.value(i).to_string(),
-                        rating,
-                        rating_deviation: rating_deviation_array.value(i) as i32,
-                        popularity: popularity_array.value(i) as i32,
-                        nb_plays: nb_plays_array.value(i),
-                        themes: themes.join(", "),
-                        game_url: game_url_array.value(i).to_string(),
-                        opening_tags: opening_tags.join(", "),
-                    });
-                }
+                puzzles.push(Puzzle {
+                    puzzle_id: puzzle_id_array.value(i).to_string(),
+                    fen: fen_array.value(i).to_string(),
+                    moves: moves_array.value(i).to_string(),
+                    rating: rating_array.value(i) as i32,
+                    rating_deviation: rating_deviation_array.value(i) as i32,
+                    popularity: popularity_array.value(i) as i32,
+                    nb_plays: nb_plays_array.value(i),
+                    themes: themes.join(", "),
+                    game_url: game_url_array.value(i).to_string(),
+                    opening_tags: opening_tags.join(", "),
+                });
             }
         }
     }
+    Ok(puzzles)
+}
 
-    if puzzles.is_empty() {
+pub fn get_random_puzzle(level: String) -> Result<Puzzle, String> {
+    let (min_rating, max_rating) = match level.as_str() {
+        "Easy" => (800, 1200),
+        "Medium" => (1201, 1600),
+        "Hard" => (1601, 2000),
+        _ => (800, 2000),
+    };
+
+    let puzzles_lock = PUZZLES.lock().unwrap();
+    let filtered_puzzles: Vec<Puzzle> = puzzles_lock
+        .iter()
+        .filter(|p| p.rating >= min_rating && p.rating <= max_rating)
+        .cloned()
+        .collect();
+
+    if filtered_puzzles.is_empty() {
         return Err("No puzzles found in the specified rating range.".to_string());
     }
 
     let mut rng = rand::thread_rng();
-    let random_index = rng.gen_range(0..puzzles.len());
-
-    Ok(puzzles[random_index].clone())
+    let random_index = rng.gen_range(0..filtered_puzzles.len());
+    Ok(filtered_puzzles[random_index].clone())
 }

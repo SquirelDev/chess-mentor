@@ -13,6 +13,7 @@ interface Puzzle {
     nb_plays: number;
     themes: string;
     game_url: string;
+    opening_tags: string;
 }
 
 const PuzzleTrainer = () => {
@@ -22,6 +23,7 @@ const PuzzleTrainer = () => {
     const [solution, setSolution] = useState<string[]>([]);
     const [moveIndex, setMoveIndex] = useState(0);
     const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (puzzle) {
@@ -44,12 +46,16 @@ const PuzzleTrainer = () => {
     }, [puzzle]);
 
     const fetchPuzzle = async () => {
+        setLoading(true);
+        setMessage('');
         try {
             const newPuzzle = await invoke<Puzzle>('get_random_puzzle', { level });
             setPuzzle(newPuzzle);
         } catch (error) {
             console.error('Failed to fetch puzzle:', error);
             setMessage(`Failed to fetch puzzle: ${error}`);
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -108,12 +114,14 @@ const PuzzleTrainer = () => {
             <div style={{ width: '400px', marginTop: '1rem' }}>
                 <Chessboard position={game.fen()} onPieceDrop={onDrop} />
             </div>
-            {puzzle && (
+            {puzzle && !loading && (
                 <div>
                     <p>Rating: {puzzle.rating}</p>
                     <p>Themes: {puzzle.themes}</p>
+                    <p>Opening Tags: {puzzle.opening_tags}</p>
                 </div>
             )}
+            {loading && <p>Loading puzzle...</p>}
             {message && <p>{message}</p>}
         </div>
     );

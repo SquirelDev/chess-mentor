@@ -19,6 +19,7 @@ fn get_all_openings() -> Result<Vec<openings::Opening>, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    puzzles::initialize_puzzles();
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![greet, get_random_puzzle, get_all_openings])

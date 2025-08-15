@@ -725,6 +725,7 @@ name = "chess-mentor"
 version = "0.1.0"
 dependencies = [
  "arrow",
+ "once_cell",
  "parquet",
  "rand 0.8.5",
  "serde",
