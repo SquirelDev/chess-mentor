@@ -10,7 +10,7 @@
       "identifier": "shell:allow-spawn",
       "allow": [
         {
-          "name": "stockfish-sidecar",
+          "name": "stockfish",
           "sidecar": true
         }
       ]

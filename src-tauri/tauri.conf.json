@@ -32,7 +32,7 @@
       "icons/icon.ico"
     ],
     "externalBin": [
-      "../engine/stockfish"
+      "engine/stockfish"
     ]
   }
 }
