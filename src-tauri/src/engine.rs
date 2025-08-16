@@ -3,7 +3,6 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tauri::async_runtime::spawn;
 use tokio::sync::Mutex;
-use std::io::Write;
 use std::sync::Arc;
 
 pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<String, String> {
@@ -36,8 +35,8 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
         }
     });
 
-    child.write_all(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
-    child.write_all(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
+    child.write(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
+    child.write(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
 
     // Wait for the best move to be found, with a timeout
     for _ in 0..200 { // Timeout after 20 seconds (200 * 100ms)
