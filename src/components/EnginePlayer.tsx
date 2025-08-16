@@ -5,7 +5,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 const EnginePlayer = () => {
     const [game, setGame] = useState(new Chess());
-    const [depth, setDepth] = useState(5); // Default depth
+    const [depth, setDepth] = useState(5);
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
     const [isEngineThinking, setIsEngineThinking] = useState(false);
 
@@ -14,20 +14,18 @@ const EnginePlayer = () => {
         if (game.turn() !== playerColor) {
             getEngineMove(game.fen());
         }
-    }, [playerColor]);
-
+    }, [playerColor, game]); // Also run when game state changes and it's engine's turn
 
     function handleNewGame() {
         const newGame = new Chess();
         setGame(newGame);
         if (playerColor === 'black') {
-            getEngineMove(newGame.fen());
+            setTimeout(() => getEngineMove(newGame.fen()), 250);
         }
     }
 
     async function getEngineMove(fen: string) {
         if (game.isGameOver()) return;
-
         setIsEngineThinking(true);
         try {
             const bestMove = await invoke<string>('get_engine_move', { fen, depth: Number(depth) });
@@ -48,18 +46,22 @@ const EnginePlayer = () => {
 
         const gameCopy = new Chess(game.fen());
         try {
-            const move = gameCopy.move({
-                from: sourceSquare,
-                to: targetSquare,
+            const moveResult = gameCopy.move({
+                from: sourceSquare, // Corrected variable
+                to: targetSquare,   // Corrected variable
                 promotion: 'q',
             });
+
+            // This check is redundant for chess.js v1 which throws, but good for safety.
+            if (moveResult === null) {
+                return false;
+            }
+
             setGame(gameCopy);
-
             setTimeout(() => getEngineMove(gameCopy.fen()), 250);
-
             return true;
         } catch (error) {
-            return false; // illegal move
+            return false; // Catches exceptions from chess.js for illegal moves
         }
     }
 
