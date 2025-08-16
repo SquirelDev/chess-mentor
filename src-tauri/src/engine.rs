@@ -1,11 +1,14 @@
-use tauri::api::process::{Command, CommandEvent};
+use tauri::AppHandle;
+use tauri_plugin_shell::ShellExt;
+use tauri_plugin_shell::process::CommandEvent;
 use tauri::async_runtime::spawn;
 use tokio::sync::Mutex;
 use std::io::Write;
 use std::sync::Arc;
 
-pub async fn get_engine_move(fen: String, depth: u8) -> Result<String, String> {
-    let (mut rx, mut child) = Command::new_sidecar("stockfish-sidecar")
+pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<String, String> {
+    let shell = app.shell();
+    let (mut rx, mut child) = shell.sidecar("stockfish-sidecar")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .spawn()
         .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
@@ -32,7 +35,6 @@ pub async fn get_engine_move(fen: String, depth: u8) -> Result<String, String> {
         }
     });
 
-    // It's important to write to stdin after the event loop is running
     let stdin_writer = child.stdin().as_mut().ok_or("Failed to get stdin writer")?;
 
     let position_cmd = format!("position fen {}\n", fen);
@@ -40,7 +42,6 @@ pub async fn get_engine_move(fen: String, depth: u8) -> Result<String, String> {
 
     let go_cmd = format!("go depth {}\n", depth);
     stdin_writer.write_all(go_cmd.as_bytes()).map_err(|e| e.to_string())?;
-
 
     // Wait for the best move to be found, with a timeout
     for _ in 0..200 { // Timeout after 20 seconds (200 * 100ms)

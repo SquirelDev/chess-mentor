@@ -7,13 +7,10 @@
     "core:default",
     "opener:default",
     {
-      "identifier": "shell:execute",
-      "description": "Permission to execute the Stockfish sidecar",
-      "windows": ["main"],
+      "identifier": "shell:allow-spawn",
       "allow": [
         {
           "name": "stockfish-sidecar",
-          "cmd": "$RESOURCE/engine/stockfish",
           "sidecar": true
         }
       ]
