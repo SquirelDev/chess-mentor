@@ -40,7 +40,6 @@ const PuzzleTrainer = () => {
                     const from = firstMove.substring(0, 2);
                     const to = firstMove.substring(2, 4);
 
-                    // Use a new chess instance for the move to avoid modifying the one in state directly
                     const gameAfterMove = new Chess(puzzle.fen);
                     gameAfterMove.move({ from, to, promotion: 'q' });
 
@@ -78,10 +77,10 @@ const PuzzleTrainer = () => {
             gameCopy.move({
                 from: sourceSquare,
                 to: targetSquare,
-                promotion: 'q', // always promote to a queen for simplicity
+                promotion: 'q',
             });
         } catch (error) {
-            return false; // illegal move
+            return false;
         }
 
         const expectedMove = solution[moveIndex];
@@ -92,7 +91,6 @@ const PuzzleTrainer = () => {
             setMoveIndex(moveIndex + 1);
             setMessage('Correct!');
 
-            // If there's a next move for the opponent, play it
             if (moveIndex + 1 < solution.length) {
                 setTimeout(() => {
                     const opponentMove = solution[moveIndex + 1];
@@ -113,29 +111,42 @@ const PuzzleTrainer = () => {
     };
 
     return (
-        <div>
-            <h2>Puzzle Trainer</h2>
-            <div>
-                <label htmlFor="level-select">Difficulty: </label>
-                <select id="level-select" value={level} onChange={(e) => setLevel(e.target.value)}>
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Hard">Hard</option>
-                </select>
-                <button onClick={fetchPuzzle}>New Puzzle</button>
-            </div>
-            <div style={{ width: '400px', marginTop: '1rem' }}>
-                <Chessboard options={{ position: game.fen(), onPieceDrop: onDrop }} />
-            </div>
-            {puzzle && !loading && (
-                <div>
-                    <p>Rating: {puzzle.rating}</p>
-                    <p>Themes: {puzzle.themes}</p>
-                    <p>Opening Tags: {puzzle.opening_tags}</p>
+        <div className="trainer-container">
+            <div className="chessboard-area">
+                <h2>Puzzle Trainer</h2>
+                <div style={{ width: '450px', maxWidth: '100%' }}>
+                    <Chessboard options={{ position: game.fen(), onPieceDrop: onDrop }} />
                 </div>
-            )}
-            {loading && <p>Loading puzzle...</p>}
-            {message && <p>{message}</p>}
+                {loading && <p className="status-message">Loading puzzle...</p>}
+                {message && <p className="status-message">{message}</p>}
+            </div>
+            <div className="info-area">
+                <div className="card">
+                    <h3>Controls</h3>
+                    <div className="controls">
+                        <label htmlFor="level-select">Difficulty: </label>
+                        <select id="level-select" className="select" value={level} onChange={(e) => setLevel(e.target.value)}>
+                            <option value="Easy">Easy</option>
+                            <option value="Medium">Medium</option>
+                            <option value="Hard">Hard</option>
+                        </select>
+                        <button className="button" onClick={fetchPuzzle}>New Puzzle</button>
+                    </div>
+                </div>
+                <div className="card">
+                    <h3>Puzzle Info</h3>
+                    {puzzle && !loading ? (
+                        <div className="puzzle-info">
+                            <p><strong>Rating:</strong> {puzzle.rating}</p>
+                            <p><strong>Themes:</strong> {puzzle.themes}</p>
+                            <p><strong>Played:</strong> {puzzle.nb_plays.toLocaleString()} times</p>
+                            <p><strong>From Game:</strong> <a href={puzzle.game_url} target="_blank" rel="noopener noreferrer">View on Lichess</a></p>
+                        </div>
+                    ) : !loading && (
+                        <p>Click "New Puzzle" to begin.</p>
+                    )}
+                </div>
+            </div>
         </div>
     );
 };
