@@ -12,7 +12,8 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
         .spawn()
         .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
 
-    let child_arc = Arc::new(Mutex::new(child));
+    // Wrap child in Arc<Mutex<Option<...>>> to allow taking ownership
+    let child_arc = Arc::new(Mutex::new(Some(child)));
     let child_clone_for_task = Arc::clone(&child_arc);
 
     let best_move = Arc::new(Mutex::new(None));
@@ -28,9 +29,12 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
                         let mut locked_move = result_best_move.lock().await;
                         *locked_move = Some(parts[1].to_string());
 
-                        let mut child_guard = child_clone_for_task.lock().await;
-                        if let Err(e) = child_guard.kill() {
-                            eprintln!("Failed to kill stockfish process: {}", e);
+                        // Take ownership of the child process to kill it
+                        let mut child_opt_guard = child_clone_for_task.lock().await;
+                        if let Some(child_to_kill) = child_opt_guard.take() {
+                            if let Err(e) = child_to_kill.kill() {
+                                eprintln!("Failed to kill stockfish process: {}", e);
+                            }
                         }
                         break;
                     }
@@ -41,9 +45,11 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
 
     {
         let mut child_guard = child_arc.lock().await;
-        child_guard.write(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
-        child_guard.write(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
-    } // MutexGuard is dropped here, releasing the lock
+        if let Some(child) = child_guard.as_mut() {
+            child.write(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
+            child.write(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
+        }
+    }
 
     // Wait for the best move to be found, with a timeout
     for _ in 0..200 { // Timeout after 20 seconds (200 * 100ms)
@@ -53,6 +59,14 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
         }
         drop(locked_move);
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+    }
+
+    // If we timeout, we should still try to kill the process
+    let mut child_opt_guard = child_arc.lock().await;
+    if let Some(child_to_kill) = child_opt_guard.take() {
+        if let Err(e) = child_to_kill.kill() {
+            eprintln!("Failed to kill stockfish process on timeout: {}", e);
+        }
     }
 
     Err("Engine timed out or failed to find a move.".to_string())
