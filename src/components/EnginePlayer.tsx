@@ -4,64 +4,92 @@ import { Chess } from 'chess.js';
 import { invoke } from '@tauri-apps/api/core';
 
 const EnginePlayer = () => {
+    console.log('--- EnginePlayer component re-rendered ---');
     const [game, setGame] = useState(new Chess());
     const [depth, setDepth] = useState(5);
     const [playerColor, setPlayerColor] = useState<'white' | 'black'>('white');
     const [isEngineThinking, setIsEngineThinking] = useState(false);
 
     useEffect(() => {
-        // If it's the engine's turn to start, get a move.
+        console.log(`useEffect triggered. Player color: ${playerColor}, Game turn: ${game.turn()}`);
         if (game.turn() !== playerColor) {
+            console.log('Engine\'s turn to move.');
             getEngineMove(game.fen());
         }
-    }, [playerColor, game]); // Also run when game state changes and it's engine's turn
+    }, [playerColor, game]);
 
     function handleNewGame() {
+        console.log('--- handleNewGame called ---');
         const newGame = new Chess();
         setGame(newGame);
         if (playerColor === 'black') {
+            console.log('Player is black, engine to move first.');
             setTimeout(() => getEngineMove(newGame.fen()), 250);
         }
     }
 
     async function getEngineMove(fen: string) {
-        if (game.isGameOver()) return;
+        console.log(`--- getEngineMove called. FEN: ${fen}, Depth: ${depth} ---`);
+        if (game.isGameOver()) {
+            console.log('Game is over, not getting engine move.');
+            return;
+        }
         setIsEngineThinking(true);
         try {
+            console.log('Invoking backend for engine move...');
             const bestMove = await invoke<string>('get_engine_move', { fen, depth: Number(depth) });
+            console.log(`Backend returned best move: ${bestMove}`);
             const gameCopy = new Chess(fen);
             gameCopy.move(bestMove);
             setGame(gameCopy);
+            console.log('Game state updated with engine move.');
         } catch (error) {
-            console.error("Failed to get engine move:", error);
+            console.error("!!! Failed to get engine move:", error);
         } finally {
+            console.log('Engine thinking finished.');
             setIsEngineThinking(false);
         }
     }
 
     function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string | null }) {
-        if (!targetSquare || game.turn() !== playerColor || isEngineThinking) {
+        console.log(`--- onDrop called. From: ${sourceSquare}, To: ${targetSquare} ---`);
+        console.log(`Current state: isEngineThinking: ${isEngineThinking}, playerColor: ${playerColor}, game.turn(): ${game.turn()}`);
+
+        if (!targetSquare) {
+            console.log('Invalid drop: targetSquare is null.');
+            return false;
+        }
+        if (isEngineThinking) {
+            console.log('Invalid drop: Engine is thinking.');
+            return false;
+        }
+        if (game.turn() !== playerColor) {
+            console.log('Invalid drop: Not player\'s turn.');
             return false;
         }
 
         const gameCopy = new Chess(game.fen());
         try {
+            console.log(`Attempting move: ${sourceSquare}-${targetSquare}`);
             const moveResult = gameCopy.move({
-                from: sourceSquare, // Corrected variable
-                to: targetSquare,   // Corrected variable
+                from: sourceSquare,
+                to: targetSquare,
                 promotion: 'q',
             });
 
-            // This check is redundant for chess.js v1 which throws, but good for safety.
             if (moveResult === null) {
+                console.log('Move is illegal (chess.js returned null).');
                 return false;
             }
 
+            console.log('Move successful, updating game state.');
             setGame(gameCopy);
+            console.log('Requesting engine move in 250ms.');
             setTimeout(() => getEngineMove(gameCopy.fen()), 250);
             return true;
         } catch (error) {
-            return false; // Catches exceptions from chess.js for illegal moves
+            console.error('!!! Illegal move (chess.js threw an error):', error);
+            return false;
         }
     }
 
@@ -97,8 +125,8 @@ const EnginePlayer = () => {
                         </div>
                          <div className="control-group">
                             <label>Play as: </label>
-                            <button className="button" onClick={() => setPlayerColor('white')}>White</button>
-                            <button className="button" onClick={() => setPlayerColor('black')}>Black</button>
+                            <button className="button" onClick={() => { console.log('Setting player color to white'); setPlayerColor('white'); }}>White</button>
+                            <button className="button" onClick={() => { console.log('Setting player color to black'); setPlayerColor('black'); }}>Black</button>
                         </div>
                         <button className="button" onClick={handleNewGame}>New Game</button>
                     </div>
