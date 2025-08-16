@@ -68,8 +68,10 @@ const PuzzleTrainer = () => {
         }
     };
 
-    const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string }) => {
-        if (!puzzle || moveIndex >= solution.length) return false;
+    const onDrop = ({ sourceSquare, targetSquare }: { sourceSquare: string, targetSquare: string | null }) => {
+        if (!targetSquare || !puzzle || moveIndex >= solution.length) {
+            return false;
+        }
 
         const gameCopy = new Chess(game.fen());
         try {
