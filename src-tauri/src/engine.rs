@@ -7,10 +7,13 @@ use std::sync::Arc;
 
 pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<String, String> {
     let shell = app.shell();
-    let (mut rx, mut child) = shell.sidecar("stockfish-sidecar")
+    let (mut rx, child) = shell.sidecar("stockfish-sidecar")
         .map_err(|e| format!("Failed to create sidecar command: {}", e))?
         .spawn()
         .map_err(|e| format!("Failed to spawn sidecar: {}", e))?;
+
+    let child_arc = Arc::new(Mutex::new(child));
+    let child_clone_for_task = Arc::clone(&child_arc);
 
     let best_move = Arc::new(Mutex::new(None));
     let result_best_move = Arc::clone(&best_move);
@@ -24,19 +27,23 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
                     if parts.len() >= 2 {
                         let mut locked_move = result_best_move.lock().await;
                         *locked_move = Some(parts[1].to_string());
-                        // Once we have the best move, we can kill the process
-                        if let Err(e) = child.kill() {
+
+                        let mut child_guard = child_clone_for_task.lock().await;
+                        if let Err(e) = child_guard.kill() {
                             eprintln!("Failed to kill stockfish process: {}", e);
                         }
-                        break; // Exit the loop
+                        break;
                     }
                 }
             }
         }
     });
 
-    child.write(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
-    child.write(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
+    {
+        let mut child_guard = child_arc.lock().await;
+        child_guard.write(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
+        child_guard.write(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
+    } // MutexGuard is dropped here, releasing the lock
 
     // Wait for the best move to be found, with a timeout
     for _ in 0..200 { // Timeout after 20 seconds (200 * 100ms)
@@ -44,7 +51,7 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
         if let Some(the_move) = locked_move.as_ref() {
             return Ok(the_move.clone());
         }
-        drop(locked_move); // Release lock before sleeping
+        drop(locked_move);
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
     }
 
