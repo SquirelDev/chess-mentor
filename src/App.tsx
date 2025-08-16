@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PuzzleTrainer from './components/PuzzleTrainer';
 import OpeningTrainer from './components/OpeningTrainer';
+import EnginePlayer from './components/EnginePlayer';
 import './App.css';
 
 function App() {
@@ -22,10 +23,17 @@ function App() {
         >
           Opening Trainer
         </button>
+        <button
+          className={activeTab === 'engine' ? 'active' : ''}
+          onClick={() => setActiveTab('engine')}
+        >
+          Play vs. Engine
+        </button>
       </nav>
       <div className="content">
         {activeTab === 'puzzles' && <PuzzleTrainer />}
         {activeTab === 'openings' && <OpeningTrainer />}
+        {activeTab === 'engine' && <EnginePlayer />}
       </div>
     </main>
   );
