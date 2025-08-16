@@ -35,12 +35,21 @@ const PuzzleTrainer = () => {
 
             // Play the first move of the puzzle (opponent's move)
             setTimeout(() => {
-                const firstMove = puzzle.moves.split(' ')[0];
-                const from = firstMove.substring(0, 2);
-                const to = firstMove.substring(2, 4);
-                newGame.move({ from, to, promotion: 'q' });
-                setGame(new Chess(newGame.fen()));
-                setMoveIndex(1);
+                try {
+                    const firstMove = puzzle.moves.split(' ')[0];
+                    const from = firstMove.substring(0, 2);
+                    const to = firstMove.substring(2, 4);
+
+                    // Use a new chess instance for the move to avoid modifying the one in state directly
+                    const gameAfterMove = new Chess(puzzle.fen);
+                    gameAfterMove.move({ from, to, promotion: 'q' });
+
+                    setGame(gameAfterMove);
+                    setMoveIndex(1);
+                } catch (error) {
+                    console.error("Error making first puzzle move:", error);
+                    setMessage("Failed to play the puzzle's starting move.");
+                }
             }, 500);
         }
     }, [puzzle]);
