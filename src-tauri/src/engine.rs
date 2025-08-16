@@ -18,7 +18,8 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
 
     spawn(async move {
         while let Some(event) = rx.recv().await {
-            if let CommandEvent::Stdout(line) = event {
+            if let CommandEvent::Stdout(line_bytes) = event {
+                let line = String::from_utf8_lossy(&line_bytes);
                 if line.starts_with("bestmove") {
                     let parts: Vec<&str> = line.split_whitespace().collect();
                     if parts.len() >= 2 {
@@ -35,13 +36,8 @@ pub async fn get_engine_move(app: AppHandle, fen: String, depth: u8) -> Result<S
         }
     });
 
-    let stdin_writer = child.stdin().as_mut().ok_or("Failed to get stdin writer")?;
-
-    let position_cmd = format!("position fen {}\n", fen);
-    stdin_writer.write_all(position_cmd.as_bytes()).map_err(|e| e.to_string())?;
-
-    let go_cmd = format!("go depth {}\n", depth);
-    stdin_writer.write_all(go_cmd.as_bytes()).map_err(|e| e.to_string())?;
+    child.write_all(format!("position fen {}\n", fen).as_bytes()).map_err(|e| e.to_string())?;
+    child.write_all(format!("go depth {}\n", depth).as_bytes()).map_err(|e| e.to_string())?;
 
     // Wait for the best move to be found, with a timeout
     for _ in 0..200 { // Timeout after 20 seconds (200 * 100ms)
