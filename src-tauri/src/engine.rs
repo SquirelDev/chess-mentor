@@ -1,4 +1,4 @@
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 pub async fn get_engine_move(app: AppHandle, _fen: String, _depth: u8) -> Result<String, String> {
     let resource_path = app.path().resource_dir()
