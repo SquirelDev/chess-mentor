@@ -63,13 +63,15 @@ const PuzzleTrainer = () => {
         if (!puzzle || moveIndex >= solution.length) return false;
 
         const gameCopy = new Chess(game.fen());
-        const move = gameCopy.move({
-            from: sourceSquare,
-            to: targetSquare,
-            promotion: 'q', // always promote to a queen for simplicity
-        });
-
-        if (move === null) return false;
+        try {
+            gameCopy.move({
+                from: sourceSquare,
+                to: targetSquare,
+                promotion: 'q', // always promote to a queen for simplicity
+            });
+        } catch (error) {
+            return false; // illegal move
+        }
 
         const expectedMove = solution[moveIndex];
         const playerMove = `${sourceSquare}${targetSquare}`;
@@ -112,7 +114,7 @@ const PuzzleTrainer = () => {
                 <button onClick={fetchPuzzle}>New Puzzle</button>
             </div>
             <div style={{ width: '400px', marginTop: '1rem' }}>
-                <Chessboard options={{ position: game.fen(), onPieceDrop: onDrop }} />
+                <Chessboard position={game.fen()} onPieceDrop={onDrop} />
             </div>
             {puzzle && !loading && (
                 <div>
