@@ -37,7 +37,7 @@ static PUZZLES: Lazy<Mutex<Vec<Puzzle>>> = Lazy::new(|| {
 
 pub fn initialize_puzzles() {
     // Eagerly initialize the puzzles
-    let _ = PUZZLES.lock();
+    let _unused = PUZZLES.lock();
 }
 
 fn load_all_puzzles() -> Result<Vec<Puzzle>, String> {
