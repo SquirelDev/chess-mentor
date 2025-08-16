@@ -9,25 +9,15 @@ use std::sync::Mutex;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Puzzle {
-    #[serde(rename = "PuzzleId")]
     pub puzzle_id: String,
-    #[serde(rename = "FEN")]
     pub fen: String,
-    #[serde(rename = "Moves")]
     pub moves: String,
-    #[serde(rename = "Rating")]
     pub rating: i32,
-    #[serde(rename = "RatingDeviation")]
     pub rating_deviation: i32,
-    #[serde(rename = "Popularity")]
     pub popularity: i32,
-    #[serde(rename = "NbPlays")]
     pub nb_plays: i64,
-    #[serde(rename = "Themes")]
     pub themes: String,
-    #[serde(rename = "GameUrl")]
     pub game_url: String,
-    #[serde(rename = "OpeningTags")]
     pub opening_tags: String,
 }
 
