@@ -123,7 +123,7 @@ const PuzzleTrainer = () => {
                 <button onClick={fetchPuzzle}>New Puzzle</button>
             </div>
             <div style={{ width: '400px', marginTop: '1rem' }}>
-                <Chessboard position={game.fen()} onPieceDrop={onDrop} />
+                <Chessboard options={{ position: game.fen(), onPieceDrop: onDrop }} />
             </div>
             {puzzle && !loading && (
                 <div>
