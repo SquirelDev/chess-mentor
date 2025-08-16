@@ -9,9 +9,19 @@ function App() {
   return (
     <main className="container">
       <h1>Chess Mentor</h1>
-      <nav>
-        <button onClick={() => setActiveTab('puzzles')}>Puzzle Trainer</button>
-        <button onClick={() => setActiveTab('openings')}>Opening Trainer</button>
+      <nav className="tab-nav">
+        <button
+          className={activeTab === 'puzzles' ? 'active' : ''}
+          onClick={() => setActiveTab('puzzles')}
+        >
+          Puzzle Trainer
+        </button>
+        <button
+          className={activeTab === 'openings' ? 'active' : ''}
+          onClick={() => setActiveTab('openings')}
+        >
+          Opening Trainer
+        </button>
       </nav>
       <div className="content">
         {activeTab === 'puzzles' && <PuzzleTrainer />}
